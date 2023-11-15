@@ -1,9 +1,7 @@
-import pyarrow.parquet as pq
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
 
-def ts_preprocess(data, window, normalize=False):
+def ts_preprocess(data, window, diff=False, normalize=False):
     '''
     This function is used to preprocess the time series data by denoising and 
     removing outliers. It also has other options like normalization.
@@ -14,6 +12,8 @@ def ts_preprocess(data, window, normalize=False):
         Time-series data.
     window : int
         The window size.
+    diff : Boolean, optional
+        Performs a first order difference to remove non-stationarity. The default is False.
     normalize : Boolean, optional
         Normalizes the data for neural networks. The default is False.
 
@@ -34,26 +34,10 @@ def ts_preprocess(data, window, normalize=False):
         if outliers[oi]:
             rm[oi] = avg[oi]
     
+    if diff:
+        rm = rm.diff()
+    
     if normalize:
         rm = (rm-avg)/std
     
-    return rm
-
-pq_filename = "C:/Users/ABRA/Desktop/5g_latency/s1/10-42-3-2_55500_20230809_114214.parquet"
-df = pq.read_table(pq_filename).to_pandas()
-
-# Calculate wall latency (timestamps.client.send.wall - timestamps.server.receive.wall)
-wall_latency = pd.Series(data=(df['timestamps.server.receive.wall'] - df['timestamps.client.send.wall'])/1e6, index=df.index)
-# Calculate monotonic latency (timestamps.client.send.monotonic - timestamps.server.receive.monotonic)
-#monotonic_latency = pd.Series(data=(df['timestamps.server.receive.monotonic'] - df['timestamps.client.send.monotonic'])/1e6, index=df.index)
-
-plt.plot(wall_latency)
-plt.show()
-
-processed = ts_preprocess(wall_latency, window=50)
-plt.plot(processed)
-plt.show()
-
-norm = ts_preprocess(wall_latency, window=50, normalize=True)
-plt.plot(norm)
-
+    return rm.dropna()
