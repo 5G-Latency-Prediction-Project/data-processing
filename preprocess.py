@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
+from scipy import signal
 
-def ts_preprocess(data, window, diff=False, normalize=False):
+def ts_preprocess(data, window, diff=False, normalize=False, win_type=None):
     '''
     This function is used to preprocess the time series data by denoising and 
     removing outliers. It also has other options like normalization.
@@ -23,7 +24,7 @@ def ts_preprocess(data, window, diff=False, normalize=False):
 
     '''
     # Rolling mean denoising
-    rm = data.rolling(window).mean()
+    rm = data.rolling(window, win_type=win_type).mean()
 
     # Outlier detection
     roll = rm.rolling(window)
@@ -41,3 +42,11 @@ def ts_preprocess(data, window, diff=False, normalize=False):
         rm = (rm-avg)/std
     
     return rm.dropna()
+
+def rolling_average_onesided_hanning(data, window_length):
+    hanning = signal.windows.hann(window_length * 2 -1)[0:window_length]
+    hanning = hanning / sum(hanning)
+
+    rolling_average = np.convolve(data,hanning,'same')
+
+    return pd.Series(rolling_average, index=data.index)
